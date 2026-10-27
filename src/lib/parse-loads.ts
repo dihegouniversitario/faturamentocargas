@@ -111,7 +111,7 @@ export const loadLabel = (plate: string, dt: string, carrier: string) =>
 /** Builds the formalization e-mail body in the spreadsheet format already used by the team. */
 export function buildFormalizationEmail(loads: { raw_text: string; plate: string; dt: string; carrier: string }[]) {
   const subject =
-    loads.length === 1
+    loads.length === 1 && loads[0]
       ? `Carga ${loadLabel(loads[0].plate, loads[0].dt, loads[0].carrier)}`
       : `Cargas para faturamento (${loads.length})`;
   const body = [

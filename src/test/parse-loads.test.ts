@@ -8,7 +8,7 @@ describe("parseLoads", () => {
     const r = parseLoads(L1);
     expect(r.rejected).toEqual([]);
     expect(r.loads).toHaveLength(1);
-    const l = r.loads[0];
+    const l = r.loads[0]!;
     expect(l.dt).toBe("106875705");
     expect(l.plate).toBe("JCY5B51");
     expect(l.load_date).toBe("2026-10-26");
@@ -19,14 +19,14 @@ describe("parseLoads", () => {
     const L2 = L1.replace("92527", "11111").replace("4.368", "100");
     const r = parseLoads(`${L1}\n${L2}`);
     expect(r.loads).toHaveLength(1);
-    expect(r.loads[0].items).toHaveLength(2);
+    expect(r.loads[0]!.items).toHaveLength(2);
   });
 
   it("inherits plate and header data when plate is '-'", () => {
     const cont = "-\t-\t-\t-\t-\t22222\tCOCA 2L\t500\t3\t-\t-\t-";
     const r = parseLoads(`${L1}\n${cont}`);
     expect(r.loads).toHaveLength(1);
-    expect(r.loads[0].items[1].sap_code).toBe("22222");
+    expect(r.loads[0]!.items[1]!.sap_code).toBe("22222");
   });
 
   it("accepts two-or-more-space separation and ignores blank lines", () => {

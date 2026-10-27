@@ -161,7 +161,10 @@ function UsersPage() {
               e.preventDefault();
               if (!unitName.trim()) return;
               const { error } = await supabase.from("units").insert({ name: unitName.trim() });
-              if (error) return toast.error(error.message);
+              if (error) {
+                toast.error(error.message);
+                return;
+              }
               setUnitName("");
               qc.invalidateQueries({ queryKey: ["units"] });
             }}

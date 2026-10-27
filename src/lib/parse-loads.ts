@@ -37,7 +37,7 @@ export function parseNumberBR(v: string): number {
 function toIsoDate(br: string): string | null {
   const m = br.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (!m) return null;
-  const [, d, mo, y] = m;
+  const [, d, mo, y] = m as unknown as [string, string, string, string];
   const day = Number(d);
   const month = Number(mo);
   if (month < 1 || month > 12 || day < 1 || day > 31) return null;
@@ -67,10 +67,10 @@ export function parseLoads(text: string): ParseResult {
     // Continuation lines: "-" or empty header fields inherit from the previous line.
     const headerIdx = [0, 1, 2, 3, 4, 9, 10, 11];
     if (prev) {
-      for (const i of headerIdx) if (isBlank(cols[i])) cols[i] = prev[i];
+      for (const i of headerIdx) if (isBlank(cols[i])) cols[i] = prev[i] ?? "";
     }
 
-    const [dateBr, number, origin, destCenter, destName, sap, desc, boxesS, palletsS, carrier, plate, dt] = cols;
+    const [dateBr, number, origin, destCenter, destName, sap, desc, boxesS, palletsS, carrier, plate, dt] = cols as unknown as string[] & { length: 12 } as unknown as [string, string, string, string, string, string, string, string, string, string, string, string];
     const iso = toIsoDate(dateBr);
     const boxes = parseNumberBR(boxesS);
     const pallets = parseNumberBR(palletsS);

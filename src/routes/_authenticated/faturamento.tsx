@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/loads/StatusBadge";
-import { loadsQuery, useLoadsRealtime, useMe, type Me } from "@/lib/session";
+import { itinerariesQuery, loadsQuery, useLoadsRealtime, useMe, type Me } from "@/lib/session";
 import {
   STATUS_CLASS,
   STATUS_LABEL,
@@ -35,13 +35,15 @@ export const Route = createFileRoute("/_authenticated/faturamento")({
   component: BillingPage,
 });
 
-const GROUPS: { status: LoadStatus; label: string }[] = [
-  { status: "pendente", label: "Pendente" },
-  { status: "em_faturamento", label: "Em faturamento" },
-  { status: "faturada", label: "Faturada" },
-  { status: "erro", label: "Com erro" },
-  { status: "saida", label: "Com saída" },
-];
+// Display order in the queue; loads with "saida" leave the queue and go to Histórico.
+const ORDER: Record<LoadStatus, number> = { em_faturamento: 0, pendente: 1, erro: 2, faturada: 3, saida: 4 };
+const DOT: Record<LoadStatus, string> = {
+  pendente: "bg-st-pendente-fg",
+  em_faturamento: "bg-st-faturamento-fg",
+  faturada: "bg-st-faturada-fg",
+  erro: "bg-st-erro-fg",
+  saida: "bg-st-saida-fg",
+};
 
 function useNow(ms = 30_000) {
   const [now, setNow] = useState(Date.now());
@@ -64,6 +66,9 @@ function BillingPage() {
 
   if (!me || !canBill) return <div className="p-6 text-sm text-muted-foreground">Apenas o Faturamento acessa esta tela.</div>;
 
+  const queue = loads
+    .filter((l) => l.status !== "saida")
+    .sort((a, b) => ORDER[a.status] - ORDER[b.status] || a.created_at.localeCompare(b.created_at));
   const selected = loads.find((l) => l.id === selectedId) ?? null;
 
   async function openLoad(l: LoadWithItems) {
@@ -88,44 +93,42 @@ function BillingPage() {
       <aside className="flex min-h-0 flex-col border-r bg-panel">
         <div className="flex items-center gap-2 border-b px-3 py-2">
           <h1 className="text-sm font-semibold">Fila</h1>
+          <span className="text-[11px] text-muted-foreground">{queue.length}</span>
           <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="ml-auto h-7 w-36 text-xs" />
         </div>
-        <div className="min-h-0 flex-1 overflow-auto">
-          {GROUPS.map((g) => {
-            const items = loads.filter((l) => l.status === g.status);
-            if (g.status === "saida" && items.length === 0) return null;
+        <div className="flex gap-3 border-b px-3 py-1.5 text-[11px] text-muted-foreground">
+          {(["pendente", "em_faturamento", "faturada", "erro"] as LoadStatus[]).map((st) => (
+            <span key={st} className="flex items-center gap-1">
+              <span className={cn("size-2 rounded-full", DOT[st])} /> {STATUS_LABEL[st]}
+            </span>
+          ))}
+        </div>
+        <div className="min-h-0 flex-1 space-y-1.5 overflow-auto p-2">
+          {queue.map((l) => {
+            const locked = isLockedByOther(l, me.id, now);
             return (
-              <section key={g.status}>
-                <h2 className="sticky top-0 z-10 flex justify-between border-b bg-muted px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {g.label} <span>{items.length}</span>
-                </h2>
-                {items.map((l) => {
-                  const locked = isLockedByOther(l, me.id, now);
-                  return (
-                    <button
-                      key={l.id}
-                      onClick={() => openLoad(l)}
-                      className={cn(
-                        "block w-full border-b border-l-4 px-3 py-1.5 text-left text-xs",
-                        STATUS_CLASS[l.status],
-                        "border-l-transparent",
-                        selectedId === l.id && "border-l-primary",
-                        locked && "opacity-50",
-                      )}
-                    >
-                      <div className="font-semibold">{loadLabel(l.plate, l.dt, l.carrier)}</div>
-                      <div className="flex justify-between opacity-80">
-                        <span>{l.dest_name}</span>
-                        <span className="tabular">{fmtNum(totalPallets(l.load_items))} pallets</span>
-                      </div>
-                      {locked && <div className="text-[11px] italic">Em atendimento por {l.locked_by_name}</div>}
-                    </button>
-                  );
-                })}
-              </section>
+              <button
+                key={l.id}
+                onClick={() => openLoad(l)}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs shadow-sm ring-1 ring-black/5 transition active:scale-[0.99]",
+                  STATUS_CLASS[l.status],
+                  selectedId === l.id && "ring-2 ring-primary",
+                  locked && "opacity-50",
+                )}
+              >
+                <span className={cn("size-2.5 shrink-0 rounded-full", DOT[l.status])} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-semibold">{loadLabel(l.plate, l.dt, l.carrier)}</span>
+                  <span className="flex justify-between gap-2 opacity-75">
+                    <span className="truncate">{locked ? `Em atendimento por ${l.locked_by_name}` : l.dest_name}</span>
+                    <span className="tabular shrink-0">{fmtNum(totalPallets(l.load_items))} plt</span>
+                  </span>
+                </span>
+              </button>
             );
           })}
-          {loads.length === 0 && <p className="p-4 text-xs text-muted-foreground">Nenhuma carga em {fmtDate(date)}.</p>}
+          {queue.length === 0 && <p className="p-4 text-xs text-muted-foreground">Nenhuma carga na fila em {fmtDate(date)}.</p>}
         </div>
       </aside>
       <section className="min-h-0 overflow-auto p-4">
@@ -182,7 +185,8 @@ function LoadCard({ load, me, readOnly, onClose }: { load: LoadWithItems; me: Me
   };
 
   const notes = useAutosave(load.notes, (v) => patch({ notes: v }));
-  const itinerary = useAutosave(load.itinerary, (v) => patch({ itinerary: v }));
+  const { data: itins } = useQuery(itinerariesQuery);
+  const itinerary = itins?.get(load.dest_center.trim()) ?? "";
   const prodOrder = useAutosave(load.product_order, (v) => patch({ product_order: v.trim() }));
   const palOrder = useAutosave(load.pallet_order, (v) => patch({ pallet_order: v.trim() }));
 
@@ -214,15 +218,12 @@ function LoadCard({ load, me, readOnly, onClose }: { load: LoadWithItems; me: Me
             className="h-14 resize-none text-xs"
           />
         </label>
-        <label className="space-y-1">
+        <div className="space-y-1">
           <span className="text-muted-foreground">Itinerário</span>
-          <Input
-            value={itinerary.value}
-            disabled={readOnly}
-            onChange={(e) => itinerary.setValue(e.target.value)}
-            className="h-14 text-right text-lg font-semibold"
-          />
-        </label>
+          <div className="flex h-14 items-center justify-end rounded-md border bg-muted/50 px-3 text-lg font-semibold">
+            {itinerary || <span className="text-xs font-normal text-muted-foreground">Sem itinerário cadastrado</span>}
+          </div>
+        </div>
       </div>
       {/* Identificação */}
       <div className="flex items-end justify-between border-b bg-muted/50 px-3 py-2">
@@ -233,7 +234,7 @@ function LoadCard({ load, me, readOnly, onClose }: { load: LoadWithItems; me: Me
             <StatusBadge status={load.status} />
           </div>
           <div className="mt-0.5 text-muted-foreground">
-            {load.dest_center} · {load.dest_name} · Carga {load.load_number} · {fmtDate(load.load_date)}
+            {load.dest_center} · {load.dest_name} · Carga {load.load_number} · Previsão {fmtDate(load.load_date)}
           </div>
         </div>
         <div className="text-right">

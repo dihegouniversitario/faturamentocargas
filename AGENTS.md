@@ -15,3 +15,5 @@
 - Spreadsheet paste parsing lives in `src/lib/parse-loads.ts` (pure, covered by `src/test/parse-loads.test.ts`).
 - User creation/activation goes through admin server functions in `src/lib/admin.functions.ts` (service role loaded inside handlers after `has_role` check).
 - PWA is manifest-only (no service worker) for desktop install.
+- Loads are grouped by `import_date` (day imported); `load_date` is only the forecast from the pasted line.
+- Itineraries are fixed per destination center in `public.itineraries` (admin-managed), never edited in billing.

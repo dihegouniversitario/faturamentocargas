@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAcompanhamentoRouteImport } from './routes/_authenticated/acompanhamento'
 import { Route as AuthenticatedFaturamentoRouteImport } from './routes/_authenticated/faturamento'
+import { Route as AuthenticatedHistoricoRouteImport } from './routes/_authenticated/historico'
 import { Route as AuthenticatedImportarRouteImport } from './routes/_authenticated/importar'
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
 
@@ -43,6 +44,11 @@ const AuthenticatedFaturamentoRoute =
     path: '/faturamento',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedHistoricoRoute = AuthenticatedHistoricoRouteImport.update({
+  id: '/historico',
+  path: '/historico',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedImportarRoute = AuthenticatedImportarRouteImport.update({
   id: '/importar',
   path: '/importar',
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/acompanhamento': typeof AuthenticatedAcompanhamentoRoute
   '/faturamento': typeof AuthenticatedFaturamentoRoute
+  '/historico': typeof AuthenticatedHistoricoRoute
   '/importar': typeof AuthenticatedImportarRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
 }
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/acompanhamento': typeof AuthenticatedAcompanhamentoRoute
   '/faturamento': typeof AuthenticatedFaturamentoRoute
+  '/historico': typeof AuthenticatedHistoricoRoute
   '/importar': typeof AuthenticatedImportarRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
 }
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/acompanhamento': typeof AuthenticatedAcompanhamentoRoute
   '/_authenticated/faturamento': typeof AuthenticatedFaturamentoRoute
+  '/_authenticated/historico': typeof AuthenticatedHistoricoRoute
   '/_authenticated/importar': typeof AuthenticatedImportarRoute
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
 }
@@ -87,6 +96,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/acompanhamento'
     | '/faturamento'
+    | '/historico'
     | '/importar'
     | '/usuarios'
   fileRoutesByTo: FileRoutesByTo
@@ -95,6 +105,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/acompanhamento'
     | '/faturamento'
+    | '/historico'
     | '/importar'
     | '/usuarios'
   id:
@@ -104,6 +115,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/acompanhamento'
     | '/_authenticated/faturamento'
+    | '/_authenticated/historico'
     | '/_authenticated/importar'
     | '/_authenticated/usuarios'
   fileRoutesById: FileRoutesById
@@ -151,6 +163,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFaturamentoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/historico': {
+      id: '/_authenticated/historico'
+      path: '/historico'
+      fullPath: '/historico'
+      preLoaderRoute: typeof AuthenticatedHistoricoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/importar': {
       id: '/_authenticated/importar'
       path: '/importar'
@@ -171,6 +190,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAcompanhamentoRoute: typeof AuthenticatedAcompanhamentoRoute
   AuthenticatedFaturamentoRoute: typeof AuthenticatedFaturamentoRoute
+  AuthenticatedHistoricoRoute: typeof AuthenticatedHistoricoRoute
   AuthenticatedImportarRoute: typeof AuthenticatedImportarRoute
   AuthenticatedUsuariosRoute: typeof AuthenticatedUsuariosRoute
 }
@@ -178,6 +198,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAcompanhamentoRoute: AuthenticatedAcompanhamentoRoute,
   AuthenticatedFaturamentoRoute: AuthenticatedFaturamentoRoute,
+  AuthenticatedHistoricoRoute: AuthenticatedHistoricoRoute,
   AuthenticatedImportarRoute: AuthenticatedImportarRoute,
   AuthenticatedUsuariosRoute: AuthenticatedUsuariosRoute,
 }

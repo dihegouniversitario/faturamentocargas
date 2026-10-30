@@ -77,7 +77,7 @@ function HistoryPage() {
   );
 }
 
-function DayRows({ day, rows, itins, onOpen, span }: { day: string; rows: LoadWithItems[]; itins?: Map<string, string>; onOpen: (id: string) => void; span: number }) {
+function DayRows({ day, rows, itins, onOpen, span }: { day: string; rows: LoadWithItems[]; itins: Map<string, string> | undefined; onOpen: (id: string) => void; span: number }) {
   return (
     <>
       <tr><td colSpan={span} className="border-b bg-muted/60 px-2 py-1 font-semibold">{fmtDate(day)} · {rows.length} carga(s)</td></tr>

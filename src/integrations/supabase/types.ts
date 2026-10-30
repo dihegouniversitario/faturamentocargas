@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      itineraries: {
+        Row: {
+          created_at: string
+          dest_center: string
+          id: string
+          itinerary: string
+          unit_id: string
+        }
+        Insert: {
+          created_at?: string
+          dest_center: string
+          id?: string
+          itinerary?: string
+          unit_id: string
+        }
+        Update: {
+          created_at?: string
+          dest_center?: string
+          id?: string
+          itinerary?: string
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itineraries_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       load_history: {
         Row: {
           action: string
@@ -105,6 +137,7 @@ export type Database = {
           dest_name: string
           dt: string
           id: string
+          import_date: string
           itinerary: string
           load_date: string
           load_number: string
@@ -129,6 +162,7 @@ export type Database = {
           dest_name?: string
           dt: string
           id?: string
+          import_date?: string
           itinerary?: string
           load_date: string
           load_number?: string
@@ -153,6 +187,7 @@ export type Database = {
           dest_name?: string
           dt?: string
           id?: string
+          import_date?: string
           itinerary?: string
           load_date?: string
           load_number?: string

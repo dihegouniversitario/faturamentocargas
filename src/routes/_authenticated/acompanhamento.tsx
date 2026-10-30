@@ -54,7 +54,7 @@ function TrackingPage() {
         <table className="w-full text-xs">
           <thead className="sticky top-0 bg-muted text-left text-muted-foreground">
             <tr>
-              {["Status", "Placa", "DT", "Transportadora", "Destino", "Carga", "Data", "Pallets", "Ordem prod.", "Ordem pallets"].map((h) => (
+              {["Status", "Placa", "DT", "Transportadora", "Destino", "Carga", "Previsão", "Pallets", "Ordem prod.", "Ordem pallets"].map((h) => (
                 <th key={h} className="border-b px-2 py-1.5 font-medium">
                   {h}
                 </th>

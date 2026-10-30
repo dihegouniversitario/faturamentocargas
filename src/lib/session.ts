@@ -67,9 +67,37 @@ export const loadsQuery = (date: string) =>
       const { data, error } = await supabase
         .from("loads")
         .select("*, load_items(*)")
-        .eq("load_date", date)
+        .eq("import_date", date)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data.map((l) => ({ ...l, load_items: [...l.load_items].sort((a, b) => a.position - b.position) }));
     },
   });
+
+/** Loads imported between two dates (inclusive), newest day first — general history. */
+export const loadsRangeQuery = (from: string, to: string) =>
+  queryOptions({
+    queryKey: ["loads", "range", from, to],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("loads")
+        .select("*, load_items(*)")
+        .gte("import_date", from)
+        .lte("import_date", to)
+        .order("import_date", { ascending: false })
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data.map((l) => ({ ...l, load_items: [...l.load_items].sort((a, b) => a.position - b.position) }));
+    },
+  });
+
+/** Fixed itinerary per destination center, registered once (not edited in billing). */
+export const itinerariesQuery = queryOptions({
+  queryKey: ["itineraries"],
+  queryFn: async () => {
+    const { data, error } = await supabase.from("itineraries").select("dest_center, itinerary");
+    if (error) throw error;
+    return new Map(data.map((r) => [r.dest_center.trim(), r.itinerary]));
+  },
+  staleTime: 5 * 60_000,
+});

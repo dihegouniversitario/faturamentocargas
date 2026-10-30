@@ -44,7 +44,8 @@ export function LoadDetailsDialog({
             <dl className="grid grid-cols-4 gap-x-4 gap-y-1 text-xs">
               <Field k="DT" v={load.dt} />
               <Field k="Carga" v={load.load_number} />
-              <Field k="Data" v={fmtDate(load.load_date)} />
+              <Field k="Importada em" v={fmtDate(load.import_date)} />
+              <Field k="Previsão" v={fmtDate(load.load_date)} />
               <Field k="Destino" v={`${load.dest_center} · ${load.dest_name}`} />
               <Field k="Origem" v={load.origin_center} />
               <Field k="Ordem de produtos" v={load.product_order || "—"} />

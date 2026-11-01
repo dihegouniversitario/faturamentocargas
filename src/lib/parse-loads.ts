@@ -40,7 +40,7 @@ function toIsoDate(br: string): string | null {
   const [, d, mo, y] = m as unknown as [string, string, string, string];
   const day = Number(d);
   const month = Number(mo);
-  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  if (month < 1 || month > 12 || day < 1 || day > 31 || new Date(Number(y), month - 1, day).getMonth() !== month - 1) return null;
   return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
 }
 
@@ -56,7 +56,7 @@ export function parseLoads(text: string): ParseResult {
   let prev: string[] | null = null;
 
   for (const rawLine of text.split(/\r?\n/)) {
-    if (rawLine.trim() === "") continue;
+    if (rawLine.trim() === "" || /^data\t/i.test(rawLine.trim())) continue;
     const cols = splitLine(rawLine);
     while (cols.length < 12) cols.push("");
     if (cols.length > 12) {
@@ -81,7 +81,12 @@ export function parseLoads(text: string): ParseResult {
     }
 
     prev = cols;
-    let load = byDt.get(dt);
+    const groupKey = `${iso}|${number}`;
+    let load = byDt.get(groupKey);
+    if (load && load.dt !== dt) {
+      rejected.push(rawLine);
+      continue;
+    }
     if (!load) {
       load = {
         load_date: iso,
@@ -96,7 +101,7 @@ export function parseLoads(text: string): ParseResult {
         items: [],
         raw_lines: [],
       };
-      byDt.set(dt, load);
+      byDt.set(groupKey, load);
     }
     load.items.push({ sap_code: sap, description: desc, boxes, pallets });
     load.raw_lines.push(cols.join("\t"));

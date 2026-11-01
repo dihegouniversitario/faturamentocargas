@@ -22,11 +22,13 @@ export function LoadDetailsDialog({
     queryKey: ["history", load?.id, load?.updated_at],
     enabled: !!load,
     queryFn: async () => {
+      if (!load) return [];
       const { data } = await supabase
         .from("load_history")
         .select("*")
-        .eq("load_id", load!.id)
-        .order("created_at", { ascending: false });
+        .eq("load_id", load.id)
+        .order("created_at", { ascending: false })
+        .limit(100);
       return data ?? [];
     },
   });

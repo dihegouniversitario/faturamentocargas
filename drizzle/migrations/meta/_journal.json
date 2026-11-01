@@ -15,6 +15,20 @@
       "when": 1793355209553,
       "tag": "0001_import_date_and_itineraries",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793497582430,
+      "tag": "0002_billing_workflow_statuses",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793497641322,
+      "tag": "0003_catalogs_atomic_locks_and_import",
+      "breakpoints": true
     }
   ]
 }

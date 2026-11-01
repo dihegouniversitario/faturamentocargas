@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createAppUser, listAppUsers, updateAppUser } from "@/lib/admin.functions";
 import { useMe } from "@/lib/session";
+import { CatalogAdmin } from "@/components/loads/CatalogAdmin";
 
 export const Route = createFileRoute("/_authenticated/usuarios")({
   head: () => ({
@@ -67,6 +68,7 @@ function UsersPage() {
   return (
     <div className="grid grid-cols-[1fr_320px] gap-4 p-4">
       <section className="space-y-4">
+        <CatalogAdmin />
         <div className="rounded-md border bg-panel">
           <h2 className="border-b px-3 py-2 text-sm font-semibold">Usuários</h2>
           <table className="w-full text-xs">

@@ -4,6 +4,9 @@ import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/loads/StatusBadge";
 import { LoadDetailsDialog } from "@/components/loads/LoadDetailsDialog";
+import { ManualLoadDialog } from "@/components/loads/ManualLoadDialog";
+import { Button } from "@/components/ui/button";
+import { Link } from "@tanstack/react-router";
 import { loadsQuery, useLoadsRealtime, useMe } from "@/lib/session";
 import { fmtDate, fmtNum, todayIso, totalPallets, type LoadWithItems } from "@/lib/status";
 
@@ -24,6 +27,7 @@ function TrackingPage() {
   const [date, setDate] = useState(todayIso());
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
+  const [editing, setEditing] = useState<LoadWithItems | 'new' | null>(null);
   useLoadsRealtime();
   const { data: loads = [], isLoading } = useQuery(loadsQuery(date));
 
@@ -31,7 +35,6 @@ function TrackingPage() {
     const s = q.trim().toLowerCase();
     return loads.filter(
       (l) =>
-        l.created_by === me?.id &&
         (!s || [l.plate, l.dt, l.dest_name, l.dest_center, l.carrier].some((v) => v.toLowerCase().includes(s))),
     );
   }, [loads, q, me?.id]);
@@ -41,6 +44,7 @@ function TrackingPage() {
     <div className="flex h-full flex-col p-4">
       <div className="mb-3 flex items-center gap-2">
         <h1 className="mr-4 text-sm font-semibold">Acompanhamento</h1>
+        {me?.roles.includes('remessa') && <><Button size="sm" onClick={() => setEditing('new')}>Nova carga</Button><Link to="/importar" className="text-xs underline">Importar programação</Link></>}
         <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-8 w-40 bg-panel" />
         <Input
           placeholder="Buscar placa, DT, destino ou transportadora"
@@ -66,6 +70,7 @@ function TrackingPage() {
               <tr key={l.id} onClick={() => setOpen(l.id)} className="cursor-pointer border-b hover:bg-muted/60">
                 <td className="px-2 py-1">
                   <StatusBadge status={l.status} />
+                  {l.locked_by && <span className="block text-muted-foreground">{l.locked_by_name}</span>}
                 </td>
                 <td className="px-2 font-medium">{l.plate}</td>
                 <td className="px-2 tabular">{l.dt}</td>
@@ -76,6 +81,7 @@ function TrackingPage() {
                 <td className="px-2 tabular">{fmtNum(totalPallets(l.load_items))}</td>
                 <td className="px-2 tabular">{l.product_order || "—"}</td>
                 <td className="px-2 tabular">{l.pallet_order || "—"}</td>
+                <td>{l.status === 'pendente' && !l.locked_by && me?.roles.includes('remessa') && <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setEditing(l); }}>Editar</Button>}</td>
               </tr>
             ))}
             {!isLoading && rows.length === 0 && (
@@ -89,6 +95,7 @@ function TrackingPage() {
         </table>
       </div>
       <LoadDetailsDialog load={selected} onClose={() => setOpen(null)} billingEmail={me?.billing_email ?? null} />
+      {editing && <ManualLoadDialog load={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} />}
     </div>
   );
 }

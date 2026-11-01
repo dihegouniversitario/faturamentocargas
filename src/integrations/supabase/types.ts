@@ -305,7 +305,16 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "remessa" | "faturamento"
-      load_status: "pendente" | "em_faturamento" | "faturada" | "erro" | "saida"
+      load_status:
+        | "pendente"
+        | "em_faturamento"
+        | "faturada"
+        | "erro"
+        | "saida"
+        | "faturando"
+        | "em_corte"
+        | "impressa_ag_cte"
+        | "finalizada"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -434,7 +443,17 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "remessa", "faturamento"],
-      load_status: ["pendente", "em_faturamento", "faturada", "erro", "saida"],
+      load_status: [
+        "pendente",
+        "em_faturamento",
+        "faturada",
+        "erro",
+        "saida",
+        "faturando",
+        "em_corte",
+        "impressa_ag_cte",
+        "finalizada",
+      ],
     },
   },
 } as const

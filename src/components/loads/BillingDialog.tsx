@@ -15,7 +15,6 @@ const PALLET_CODE: Record<string, string> = { VENDA: "118571", EMPRESTIMO: "1976
 
 type Item = { key: string; product_id: string; pallets: number; boxes: number; boxes_per_pallet: number };
 
-/** Botão de copiar que fica ao lado do título do campo. */
 function CopyButton({ value, label }: { value: string; label: string }) {
   async function copy() {
     if (!value) return;
@@ -33,15 +32,14 @@ function CopyButton({ value, label }: { value: string; label: string }) {
       title={`Copiar ${label}`}
       className="ml-1 align-middle text-muted-foreground transition-colors hover:text-foreground"
     >
-      <Copy className="inline size-3.5" />
+      <Copy className="inline size-3" />
     </button>
   );
 }
 
-/** Título do campo, com o botão de copiar opcional ao lado. */
 function FieldLabel({ children, copyValue }: { children: React.ReactNode; copyValue?: string }) {
   return (
-    <Label className="text-xs text-muted-foreground">
+    <Label className="text-[11px] text-muted-foreground">
       {children}
       {copyValue !== undefined && <CopyButton value={copyValue} label={String(children)} />}
     </Label>
@@ -50,9 +48,9 @@ function FieldLabel({ children, copyValue }: { children: React.ReactNode; copyVa
 
 function ReadField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="space-y-1">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <p className="text-sm">{value || "—"}</p>
+    <div>
+      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <p className="text-xs">{value || "—"}</p>
     </div>
   );
 }
@@ -171,19 +169,17 @@ export function BillingDialog({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto">
+      <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-base">
             Carga {load.load_number} · {load.dest_name ?? load.dest_center}
           </DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            DT {dt || "—"} · {load.status}
-          </p>
+          <p className="text-xs text-muted-foreground">DT {dt || "—"} · {load.status}</p>
         </DialogHeader>
 
-        {/* Dados do destino (leitura) */}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <ReadField label="Destino" value={load.dest_name} />
+        {/* Dados do destino — leitura, compacto */}
+        <div className="grid grid-cols-3 gap-x-4 gap-y-2 sm:grid-cols-4">
+          <ReadField label="Centro" value={load.dest_center ?? ""} />
           <ReadField label="CNPJ" value={load.cnpj ?? ""} />
           <ReadField label="Cliente SAP" value={load.sap_client_code ?? ""} />
           <ReadField label="Itinerário" value={load.itinerary ?? ""} />
@@ -192,33 +188,37 @@ export function BillingDialog({
           <ReadField label="Observações" value={load.notes ?? ""} />
         </div>
 
-        {/* Ordens */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1">
+        {/* Ordens — inputs estreitos */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
             <FieldLabel copyValue={order1}>Ordem de produto</FieldLabel>
-            <Input value={order1} onChange={(e) => setOrder1(e.target.value)} inputMode="numeric" />
+            <Input value={order1} onChange={(e) => setOrder1(e.target.value)} inputMode="numeric" className="h-9" />
           </div>
-          <div className="space-y-1">
+          <div>
             <FieldLabel copyValue={order2}>Ordem de palete</FieldLabel>
-            <Input value={order2} onChange={(e) => setOrder2(e.target.value)} inputMode="numeric" />
+            <Input value={order2} onChange={(e) => setOrder2(e.target.value)} inputMode="numeric" className="h-9" />
           </div>
         </div>
 
-        {/* Placa, DT e Transportadora */}
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-1">
+        {/* Placa, DT, Transportadora — tudo na mesma linha */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div>
             <FieldLabel copyValue={plate}>Placa</FieldLabel>
-            <Input value={plate} onChange={(e) => setPlate(e.target.value.toUpperCase())} />
+            <Input
+              value={plate}
+              onChange={(e) => setPlate(e.target.value.toUpperCase())}
+              className="h-9"
+            />
           </div>
-          <div className="space-y-1 sm:col-span-2">
+          <div>
             <FieldLabel copyValue={dt}>DT</FieldLabel>
-            <Input value={dt} onChange={(e) => setDt(e.target.value)} inputMode="numeric" />
+            <Input value={dt} onChange={(e) => setDt(e.target.value)} inputMode="numeric" className="h-9" />
           </div>
-          <div className="space-y-1 sm:col-span-3">
+          <div className="sm:col-span-2">
             <FieldLabel copyValue={carrierName}>Transportadora</FieldLabel>
             <Select value={carrierId} onValueChange={setCarrierId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a transportadora" />
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
                 {(catalogs?.carriers ?? []).map((c) => (
@@ -231,17 +231,17 @@ export function BillingDialog({
           </div>
         </div>
 
-        {/* Produtos */}
+        {/* Produtos — sobe, porque os campos acima encolheram */}
         <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">Produtos</Label>
+          <Label className="text-[11px] text-muted-foreground">Produtos</Label>
           {items.map((it, idx) => {
             const p = catalogs?.products.find((x) => x.id === it.product_id);
             return (
-              <div key={it.key} className="flex flex-wrap items-end gap-3">
-                <div className="min-w-56 flex-1 space-y-1">
-                  <Label className="text-xs text-muted-foreground">Produto</Label>
+              <div key={it.key} className="flex flex-wrap items-end gap-2">
+                <div className="min-w-48 flex-1">
+                  <Label className="text-[11px] text-muted-foreground">Produto</Label>
                   <Select value={it.product_id} onValueChange={(v) => pickProduct(idx, v)}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-9">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
@@ -256,23 +256,28 @@ export function BillingDialog({
                   </Select>
                 </div>
 
-                <div className="w-28 space-y-1">
-                  <Label className="text-xs text-muted-foreground">Paletes</Label>
+                <div className="w-20">
+                  <Label className="text-[11px] text-muted-foreground">Paletes</Label>
                   <Input
                     type="number"
                     min={0}
                     value={it.pallets}
                     onChange={(e) => pickPallets(idx, Number(e.target.value))}
+                    className="h-9"
                   />
                 </div>
 
-                <div className="w-28 space-y-1">
-                  <Label className="text-xs text-muted-foreground">Caixas</Label>
-                  <Input value={fmtNum(calculateBoxes(it.pallets, it.boxes_per_pallet))} readOnly className="bg-muted" />
+                <div className="w-24">
+                  <Label className="text-[11px] text-muted-foreground">Caixas</Label>
+                  <Input
+                    value={fmtNum(calculateBoxes(it.pallets, it.boxes_per_pallet))}
+                    readOnly
+                    className="h-9 bg-muted"
+                  />
                 </div>
 
-                <div className="w-28 space-y-1">
-                  <Label className="text-xs font-semibold text-destructive">FEMSA</Label>
+                <div className="w-24">
+                  <Label className="text-[11px] font-semibold text-destructive">FEMSA</Label>
                   {p ? (
                     <button
                       type="button"
@@ -280,12 +285,12 @@ export function BillingDialog({
                         await navigator.clipboard.writeText(p.femsa_code);
                         toast.success("Código FEMSA copiado");
                       }}
-                      className="w-full rounded-md border border-destructive px-2 py-1.5 font-mono text-base font-bold text-destructive hover:bg-destructive/10"
+                      className="h-9 w-full rounded-md border border-destructive px-2 font-mono text-sm font-bold text-destructive hover:bg-destructive/10"
                     >
                       {p.femsa_code}
                     </button>
                   ) : (
-                    <p className="py-1.5">—</p>
+                    <p className="py-2 text-sm">—</p>
                   )}
                 </div>
 
@@ -300,21 +305,18 @@ export function BillingDialog({
             <Button type="button" variant="outline" size="sm" onClick={addItem}>
               <Plus className="mr-1 size-4" /> Produto
             </Button>
-            <span className="ml-auto text-sm text-muted-foreground">
-              {fmtNum(totalPallets)} paletes
-            </span>
+            <span className="ml-auto text-xs text-muted-foreground">{fmtNum(totalPallets)} paletes</span>
           </div>
         </div>
 
-        {/* Ações */}
         <div className="flex flex-wrap justify-end gap-2">
-          <Button variant="outline" onClick={save} disabled={saving}>
+          <Button variant="outline" size="sm" onClick={save} disabled={saving}>
             {saving ? "Salvando…" : "Salvar"}
           </Button>
-          <Button variant="outline" onClick={() => release("faturada")}>Faturada</Button>
-          <Button variant="outline" onClick={() => release("em_corte")}>Em corte</Button>
-          <Button variant="outline" onClick={() => release("impressa_ag_cte")}>Impressa ag. CT-e</Button>
-          <Button onClick={() => release("finalizada")}>Finalizada</Button>
+          <Button variant="outline" size="sm" onClick={() => release("faturada")}>Faturada</Button>
+          <Button variant="outline" size="sm" onClick={() => release("em_corte")}>Em corte</Button>
+          <Button variant="outline" size="sm" onClick={() => release("impressa_ag_cte")}>Impressa ag. CT-e</Button>
+          <Button size="sm" onClick={() => release("finalizada")}>Finalizada</Button>
         </div>
       </DialogContent>
     </Dialog>

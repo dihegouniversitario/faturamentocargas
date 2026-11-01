@@ -11,6 +11,10 @@ export const STATUS_LABEL: Record<LoadStatus, string> = {
   faturada: "Faturada",
   erro: "Com erro",
   saida: "Com saída",
+  faturando: "Faturando",
+  em_corte: "Em corte",
+  impressa_ag_cte: "Impressa ag. CT-e",
+  finalizada: "Finalizada",
 };
 
 export const STATUS_CLASS: Record<LoadStatus, string> = {
@@ -19,6 +23,10 @@ export const STATUS_CLASS: Record<LoadStatus, string> = {
   faturada: "bg-st-faturada text-st-faturada-fg",
   erro: "bg-st-erro text-st-erro-fg",
   saida: "bg-st-saida text-st-saida-fg",
+  faturando: "bg-st-faturamento text-st-faturamento-fg",
+  em_corte: "bg-st-erro text-st-erro-fg",
+  impressa_ag_cte: "bg-st-saida text-st-saida-fg",
+  finalizada: "bg-st-saida text-st-saida-fg",
 };
 
 export const LOCK_MINUTES = 15;

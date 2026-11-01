@@ -97,7 +97,9 @@ export const itinerariesQuery = queryOptions({
   queryFn: async () => {
     const { data, error } = await supabase.from("itineraries").select("dest_center, itinerary");
     if (error) throw error;
-    return new Map(data.map((r) => [r.dest_center.trim(), r.itinerary]));
+    const { data: destinations, error: destError } = await supabase.from("destinations").select("center, itinerary");
+    if (destError) throw destError;
+    return new Map([...data.map((r) => [r.dest_center.trim(), r.itinerary] as const), ...destinations.map((r) => [r.center.trim(), r.itinerary] as const)]);
   },
   staleTime: 5 * 60_000,
 });

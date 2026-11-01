@@ -16,8 +16,6 @@ export const Route = createFileRoute("/_authenticated")({
 const NAV: { to: string; label: string; roles: AppRole[] }[] = [
   { to: "/importar", label: "Importar", roles: ["remessa"] },
   { to: "/acompanhamento", label: "Acompanhamento", roles: ["remessa"] },
-  { to: "/faturamento", label: "Faturamento", roles: ["faturamento"] },
-  { to: "/historico", label: "Histórico", roles: ["remessa", "faturamento", "admin"] },
   { to: "/usuarios", label: "Usuários", roles: ["admin"] },
 ];
 

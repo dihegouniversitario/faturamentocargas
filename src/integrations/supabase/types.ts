@@ -14,6 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
+      carriers: {
+        Row: {
+          id: string
+          name: string
+          sap_code: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          sap_code?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          sap_code?: string | null
+        }
+        Relationships: []
+      }
+      destinations: {
+        Row: {
+          center: string
+          cnpj: string
+          id: string
+          itinerary: string
+          name: string
+          notes: string
+          pallet_code: string
+          pallet_type: string
+          sap_client_code: string
+          sigla: string
+          unit_id: string
+        }
+        Insert: {
+          center?: string
+          cnpj?: string
+          id?: string
+          itinerary?: string
+          name: string
+          notes?: string
+          pallet_code?: string
+          pallet_type?: string
+          sap_client_code?: string
+          sigla: string
+          unit_id: string
+        }
+        Update: {
+          center?: string
+          cnpj?: string
+          id?: string
+          itinerary?: string
+          name?: string
+          notes?: string
+          pallet_code?: string
+          pallet_type?: string
+          sap_client_code?: string
+          sigla?: string
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "destinations_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       itineraries: {
         Row: {
           created_at: string
@@ -42,6 +110,44 @@ export type Database = {
             columns: ["unit_id"]
             isOneToOne: false
             referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      load_events: {
+        Row: {
+          created_at: string
+          from_status: Database["public"]["Enums"]["load_status"] | null
+          id: string
+          load_id: string
+          to_status: Database["public"]["Enums"]["load_status"]
+          user_id: string | null
+          user_name: string
+        }
+        Insert: {
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["load_status"] | null
+          id?: string
+          load_id: string
+          to_status: Database["public"]["Enums"]["load_status"]
+          user_id?: string | null
+          user_name?: string
+        }
+        Update: {
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["load_status"] | null
+          id?: string
+          load_id?: string
+          to_status?: Database["public"]["Enums"]["load_status"]
+          user_id?: string | null
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "load_events_load_id_fkey"
+            columns: ["load_id"]
+            isOneToOne: false
+            referencedRelation: "loads"
             referencedColumns: ["id"]
           },
         ]
@@ -94,6 +200,7 @@ export type Database = {
           pallet_id: string
           pallets: number
           position: number
+          product_id: string | null
           sap_code: string
         }
         Insert: {
@@ -105,6 +212,7 @@ export type Database = {
           pallet_id?: string
           pallets?: number
           position?: number
+          product_id?: string | null
           sap_code?: string
         }
         Update: {
@@ -116,6 +224,7 @@ export type Database = {
           pallet_id?: string
           pallets?: number
           position?: number
+          product_id?: string | null
           sap_code?: string
         }
         Relationships: [
@@ -126,15 +235,25 @@ export type Database = {
             referencedRelation: "loads"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "load_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
         ]
       }
       loads: {
         Row: {
           carrier: string
+          carrier_id: string | null
           created_at: string
           created_by: string
           dest_center: string
           dest_name: string
+          destination_id: string | null
+          driver: string
           dt: string
           id: string
           import_date: string
@@ -151,15 +270,20 @@ export type Database = {
           product_order: string
           raw_text: string
           status: Database["public"]["Enums"]["load_status"]
+          supplier_doc_1: string
+          supplier_doc_2: string
           unit_id: string
           updated_at: string
         }
         Insert: {
           carrier?: string
+          carrier_id?: string | null
           created_at?: string
           created_by?: string
           dest_center?: string
           dest_name?: string
+          destination_id?: string | null
+          driver?: string
           dt: string
           id?: string
           import_date?: string
@@ -176,15 +300,20 @@ export type Database = {
           product_order?: string
           raw_text?: string
           status?: Database["public"]["Enums"]["load_status"]
+          supplier_doc_1?: string
+          supplier_doc_2?: string
           unit_id: string
           updated_at?: string
         }
         Update: {
           carrier?: string
+          carrier_id?: string | null
           created_at?: string
           created_by?: string
           dest_center?: string
           dest_name?: string
+          destination_id?: string | null
+          driver?: string
           dt?: string
           id?: string
           import_date?: string
@@ -201,10 +330,26 @@ export type Database = {
           product_order?: string
           raw_text?: string
           status?: Database["public"]["Enums"]["load_status"]
+          supplier_doc_1?: string
+          supplier_doc_2?: string
           unit_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "loads_carrier_id_fkey"
+            columns: ["carrier_id"]
+            isOneToOne: false
+            referencedRelation: "carriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loads_destination_id_fkey"
+            columns: ["destination_id"]
+            isOneToOne: false
+            referencedRelation: "destinations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "loads_unit_id_fkey"
             columns: ["unit_id"]
@@ -213,6 +358,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      products: {
+        Row: {
+          active: boolean
+          box_weight: number | null
+          boxes_per_pallet: number | null
+          description: string
+          femsa_code: string
+          id: string
+          ijui_code: string | null
+          nota_item: number | null
+          short_name: string
+        }
+        Insert: {
+          active?: boolean
+          box_weight?: number | null
+          boxes_per_pallet?: number | null
+          description?: string
+          femsa_code: string
+          id?: string
+          ijui_code?: string | null
+          nota_item?: number | null
+          short_name?: string
+        }
+        Update: {
+          active?: boolean
+          box_weight?: number | null
+          boxes_per_pallet?: number | null
+          description?: string
+          femsa_code?: string
+          id?: string
+          ijui_code?: string | null
+          nota_item?: number | null
+          short_name?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -293,6 +474,45 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_load: {
+        Args: { load_id: string }
+        Returns: {
+          carrier: string
+          carrier_id: string | null
+          created_at: string
+          created_by: string
+          dest_center: string
+          dest_name: string
+          destination_id: string | null
+          driver: string
+          dt: string
+          id: string
+          import_date: string
+          itinerary: string
+          load_date: string
+          load_number: string
+          locked_at: string | null
+          locked_by: string | null
+          locked_by_name: string | null
+          notes: string
+          origin_center: string
+          pallet_order: string
+          plate: string
+          product_order: string
+          raw_text: string
+          status: Database["public"]["Enums"]["load_status"]
+          supplier_doc_1: string
+          supplier_doc_2: string
+          unit_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "loads"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       current_unit: { Args: never; Returns: string }
       current_user_name: { Args: never; Returns: string }
       has_role: {
@@ -301,6 +521,54 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      import_programming: { Args: { payload: Json }; Returns: number }
+      normalize_catalog: { Args: { value: string }; Returns: string }
+      release_load: {
+        Args: {
+          load_id: string
+          new_status: Database["public"]["Enums"]["load_status"]
+        }
+        Returns: {
+          carrier: string
+          carrier_id: string | null
+          created_at: string
+          created_by: string
+          dest_center: string
+          dest_name: string
+          destination_id: string | null
+          driver: string
+          dt: string
+          id: string
+          import_date: string
+          itinerary: string
+          load_date: string
+          load_number: string
+          locked_at: string | null
+          locked_by: string | null
+          locked_by_name: string | null
+          notes: string
+          origin_center: string
+          pallet_order: string
+          plate: string
+          product_order: string
+          raw_text: string
+          status: Database["public"]["Enums"]["load_status"]
+          supplier_doc_1: string
+          supplier_doc_2: string
+          unit_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "loads"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      save_billing_load: {
+        Args: { load_id: string; payload: Json }
+        Returns: undefined
       }
     }
     Enums: {

@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { catalogsQuery, validateProgramming, importProgramming } from "@/lib/catalogs";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { EmailDialog } from "@/components/loads/EmailDialog";
-import { parseLoads, loadLabel, type ParsedLoad } from "@/lib/parse-loads";
+import { parseLoads, loadLabel } from "@/lib/parse-loads";
 import { useMe } from "@/lib/session";
 import { fmtNum } from "@/lib/status";
 
@@ -30,59 +31,21 @@ function ImportPage() {
   const [imported, setImported] = useState<{ raw_text: string; plate: string; dt: string; carrier: string }[]>([]);
   const [emailOpen, setEmailOpen] = useState(false);
   const parsed = useMemo(() => parseLoads(text), [text]);
+  const { data: catalogs, error: catalogError } = useQuery(catalogsQuery);
+  const errors = catalogs ? validateProgramming(parsed.loads, catalogs) : [];
   const canImport = me?.roles.includes("remessa");
 
   async function confirm() {
     if (!me?.unit_id) return;
     setBusy(true);
     try {
-      const dts = parsed.loads.map((l) => l.dt);
-      const { data: existing } = await supabase.from("loads").select("dt").in("dt", dts);
-      const dup = new Set((existing ?? []).map((e) => e.dt));
-      const toInsert = parsed.loads.filter((l) => !dup.has(l.dt));
-      const ok: ParsedLoad[] = [];
-      for (const l of toInsert) {
-        const raw_text = l.raw_lines.join("\n");
-        const { data: row, error } = await supabase
-          .from("loads")
-          .insert({
-            unit_id: me.unit_id,
-            dt: l.dt,
-            load_number: l.load_number,
-            load_date: l.load_date,
-            origin_center: l.origin_center,
-            dest_center: l.dest_center,
-            dest_name: l.dest_name,
-            carrier: l.carrier,
-            plate: l.plate,
-            raw_text,
-          })
-          .select("id")
-          .single();
-        if (error) {
-          if (error.code === "23505") dup.add(l.dt);
-          else toast.error(`DT ${l.dt}: ${error.message}`);
-          continue;
-        }
-        const { error: e2 } = await supabase.from("load_items").insert(
-          l.items.map((it, idx) => ({
-            load_id: row.id,
-            position: idx,
-            sap_code: it.sap_code,
-            description: it.description,
-            boxes: it.boxes,
-            pallets: it.pallets,
-            boxes_per_pallet: it.pallets > 0 ? it.boxes / it.pallets : 0,
-          })),
-        );
-        if (e2) toast.error(`Produtos do DT ${l.dt}: ${e2.message}`);
-        ok.push(l);
-      }
-      if (ok.length) toast.success(`${ok.length} carga(s) importada(s) com sucesso.`);
-      if (dup.size) toast.warning(`DT já existente, não importado: ${[...dup].join(", ")}`);
-      setImported(ok.map((l) => ({ raw_text: l.raw_lines.join("\n"), plate: l.plate, dt: l.dt, carrier: l.carrier })));
+      const count = await importProgramming(parsed.loads);
+      toast.success(`${count} carga(s) importada(s)/atualizada(s).`);
+      setImported(parsed.loads.map((l) => ({ raw_text: l.raw_lines.join("\n"), plate: l.plate, dt: l.dt, carrier: l.carrier })));
       setText("");
       qc.invalidateQueries({ queryKey: ["loads"] });
+    } catch (e) {
+      toast.error((e as { message: string }).message);
     } finally {
       setBusy(false);
     }
@@ -93,6 +56,14 @@ function ImportPage() {
   return (
     <div className="grid h-full grid-cols-[1fr_380px] gap-4 p-4">
       <section className="flex min-h-0 flex-col gap-2">
+        <Input type="file" accept=".xlsx" aria-label="Planilha XLSX" onChange={async (e) => {
+          const file = e.target.files?.[0]; if (!file) return;
+          try {
+            const { default: readXlsxFile } = await import('read-excel-file/browser');
+            const rows = await readXlsxFile(file);
+            setText(rows.map((row) => row.map((cell) => cell instanceof Date ? `${String(cell.getUTCDate()).padStart(2,'0')}/${String(cell.getUTCMonth()+1).padStart(2,'0')}/${cell.getUTCFullYear()}` : String(cell ?? '')).join('\t')).join('\n'));
+          } catch { toast.error('Não foi possível ler a planilha XLSX.'); }
+        }} />
         <div className="flex items-baseline justify-between">
           <h1 className="text-sm font-semibold">Importar cargas</h1>
           <span className="text-xs text-muted-foreground">Cole as linhas da planilha (sem cabeçalho)</span>
@@ -123,6 +94,8 @@ function ImportPage() {
             <span className="text-destructive"> · {parsed.rejected.length} linha(s) não entendida(s)</span>
           )}
         </div>
+        {errors.map((err) => <p key={err} className="px-3 py-1 text-xs text-destructive">{err}</p>)}
+        {catalogError && <p className="p-3 text-xs text-destructive">Não foi possível carregar os cadastros.</p>}
         <ul className="min-h-0 flex-1 overflow-auto text-xs">
           {parsed.loads.map((l) => (
             <li key={l.dt} className="border-b px-3 py-1.5">
@@ -144,7 +117,7 @@ function ImportPage() {
           )}
         </ul>
         <div className="border-t p-3">
-          <Button className="w-full" disabled={busy || parsed.loads.length === 0} onClick={confirm}>
+          <Button className="w-full" disabled={busy || !catalogs || !!catalogError || errors.length > 0 || parsed.rejected.length > 0 || parsed.loads.length === 0} onClick={confirm}>
             {busy ? "Importando…" : `Confirmar importação (${parsed.loads.length})`}
           </Button>
         </div>

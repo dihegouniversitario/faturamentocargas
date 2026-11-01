@@ -10,14 +10,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { catalogsQuery, calculateBoxes, type Product } from "@/lib/catalogs";
 import { fmtNum } from "@/lib/status";
-import { cn } from "@/lib/utils";
 
 const PALLET_CODE: Record<string, string> = { VENDA: "118571", EMPRESTIMO: "197604" };
 
 type Item = { key: string; product_id: string; pallets: number; boxes: number; boxes_per_pallet: number };
 
-/** Valor grande, monoespaçado, que copia no clique — para levar ao SAP. */
-function CopyField({ label, value, hint }: { label: string; value: string; hint?: string }) {
+/** Botão de copiar que fica ao lado do título do campo. */
+function CopyButton({ value, label }: { value: string; label: string }) {
   async function copy() {
     if (!value) return;
     try {
@@ -28,22 +27,24 @@ function CopyField({ label, value, hint }: { label: string; value: string; hint?
     }
   }
   return (
-    <div className="space-y-1">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <button
-        type="button"
-        onClick={copy}
-        title="Clique para copiar"
-        className={cn(
-          "group flex w-full items-center justify-between gap-2 rounded-md border bg-panel px-3 py-2 text-left",
-          "font-mono text-lg font-semibold tabular-nums hover:bg-muted/60",
-        )}
-      >
-        <span className="truncate">{value || "—"}</span>
-        <Copy className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-      </button>
-      {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
-    </div>
+    <button
+      type="button"
+      onClick={copy}
+      title={`Copiar ${label}`}
+      className="ml-1 align-middle text-muted-foreground transition-colors hover:text-foreground"
+    >
+      <Copy className="inline size-3.5" />
+    </button>
+  );
+}
+
+/** Título do campo, com o botão de copiar opcional ao lado. */
+function FieldLabel({ children, copyValue }: { children: React.ReactNode; copyValue?: string }) {
+  return (
+    <Label className="text-xs text-muted-foreground">
+      {children}
+      {copyValue !== undefined && <CopyButton value={copyValue} label={String(children)} />}
+    </Label>
   );
 }
 
@@ -73,7 +74,6 @@ export function BillingDialog({
   const [plate, setPlate] = useState(load.plate ?? "");
   const [dt, setDt] = useState(load.dt ?? "");
   const [carrierId, setCarrierId] = useState<string>(load.carrier_id ?? "");
-  const [notes, setNotes] = useState(load.notes ?? "");
   const [saving, setSaving] = useState(false);
 
   const [items, setItems] = useState<Item[]>(
@@ -86,10 +86,10 @@ export function BillingDialog({
     })),
   );
 
+  const carrierName = catalogs?.carriers.find((c) => c.id === carrierId)?.name ?? load.carrier ?? "";
   const palletType = load.pallet_type ?? "VENDA";
   const palletCode = PALLET_CODE[palletType] ?? PALLET_CODE.VENDA;
   const totalPallets = items.reduce((s, i) => s + Number(i.pallets || 0), 0);
-  const totalBoxes = items.reduce((s, i) => s + calculateBoxes(Number(i.pallets || 0), i.boxes_per_pallet), 0);
 
   function setItem(idx: number, patch: Partial<Item>) {
     setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
@@ -119,7 +119,6 @@ export function BillingDialog({
     setItems((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  /** Salva produtos + ordens + transporte via RPC (renova a reserva). */
   async function save() {
     if (!items.length) {
       toast.error("Inclua ao menos um produto");
@@ -149,10 +148,6 @@ export function BillingDialog({
         },
       });
       if (error) throw error;
-      if (notes !== (load.notes ?? "")) {
-        const { error: e2 } = await supabase.from("loads").update({ notes }).eq("id", load.id);
-        if (e2) throw e2;
-      }
       toast.success("Carga salva");
       await qc.invalidateQueries({ queryKey: ["loads"] });
       onClose();
@@ -163,7 +158,6 @@ export function BillingDialog({
     }
   }
 
-  /** Libera a carga para um novo status (chama release_load). */
   async function release(status: string) {
     const { error } = await supabase.rpc("release_load", { load_id: load.id, new_status: status });
     if (error) {
@@ -179,186 +173,141 @@ export function BillingDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl">
+          <DialogTitle>
             Carga {load.load_number} · {load.dest_name ?? load.dest_center}
           </DialogTitle>
           <p className="text-sm text-muted-foreground">
-            DT <span className="font-mono font-semibold text-foreground">{dt || "—"}</span> · {load.status}
+            DT {dt || "—"} · {load.status}
           </p>
         </DialogHeader>
 
-        {/* ---- Faixa 1: dados do destino (só leitura) ---- */}
-        <div className="grid grid-cols-2 gap-4 rounded-md border bg-muted/30 p-4 sm:grid-cols-4">
+        {/* Dados do destino (leitura) */}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <ReadField label="Destino" value={load.dest_name} />
           <ReadField label="CNPJ" value={load.cnpj ?? ""} />
           <ReadField label="Cliente SAP" value={load.sap_client_code ?? ""} />
           <ReadField label="Itinerário" value={load.itinerary ?? ""} />
           <ReadField label="Tipo palete" value={palletType} />
           <ReadField label="Código palete" value={palletCode} />
-          <ReadField label="Centro" value={load.dest_center ?? ""} />
+          <ReadField label="Observações" value={load.notes ?? ""} />
+        </div>
+
+        {/* Ordens */}
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Observações</Label>
-            <Input value={notes} onChange={(e) => setNotes(e.target.value)} className="h-8" placeholder="—" />
+            <FieldLabel copyValue={order1}>Ordem de produto</FieldLabel>
+            <Input value={order1} onChange={(e) => setOrder1(e.target.value)} inputMode="numeric" />
+          </div>
+          <div className="space-y-1">
+            <FieldLabel copyValue={order2}>Ordem de palete</FieldLabel>
+            <Input value={order2} onChange={(e) => setOrder2(e.target.value)} inputMode="numeric" />
           </div>
         </div>
 
-        {/* ---- Faixa 2: as duas ordens (ordem de preenchimento no SAP) ---- */}
-        <div className="rounded-md border bg-panel p-4">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Ordens no SAP
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <CopyField label="Ordem 1 (produto)" value={order1} hint="Ordem de produto" />
-            <CopyField label="Ordem 2 (palete)" value={order2} hint="Ordem de palete" />
+        {/* Placa, DT e Transportadora */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-1">
+            <FieldLabel copyValue={plate}>Placa</FieldLabel>
+            <Input value={plate} onChange={(e) => setPlate(e.target.value.toUpperCase())} />
           </div>
-          <div className="mt-3 grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Editar Ordem 1</Label>
-              <Input
-                value={order1}
-                onChange={(e) => setOrder1(e.target.value)}
-                className="font-mono text-lg tabular-nums"
-                inputMode="numeric"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Editar Ordem 2</Label>
-              <Input
-                value={order2}
-                onChange={(e) => setOrder2(e.target.value)}
-                className="font-mono text-lg tabular-nums"
-                inputMode="numeric"
-              />
-            </div>
+          <div className="space-y-1 sm:col-span-2">
+            <FieldLabel copyValue={dt}>DT</FieldLabel>
+            <Input value={dt} onChange={(e) => setDt(e.target.value)} inputMode="numeric" />
+          </div>
+          <div className="space-y-1 sm:col-span-3">
+            <FieldLabel copyValue={carrierName}>Transportadora</FieldLabel>
+            <Select value={carrierId} onValueChange={setCarrierId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a transportadora" />
+              </SelectTrigger>
+              <SelectContent>
+                {(catalogs?.carriers ?? []).map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        {/* ---- Faixa 3: transporte ---- */}
-        <div className="rounded-md border bg-panel p-4">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Transporte
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">DT</Label>
-              <Input
-                value={dt}
-                onChange={(e) => setDt(e.target.value)}
-                className="font-mono text-lg tabular-nums"
-                inputMode="numeric"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Placa</Label>
-              <Input
-                value={plate}
-                onChange={(e) => setPlate(e.target.value.toUpperCase())}
-                className="font-mono text-lg font-semibold tracking-wider"
-              />
-            </div>
-            <div className="space-y-1 sm:col-span-2">
-              <Label className="text-xs text-muted-foreground">Transportadora</Label>
-              <Select value={carrierId} onValueChange={setCarrierId}>
-                <SelectTrigger className="text-base">
-                  <SelectValue placeholder="Selecione a transportadora" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(catalogs?.carriers ?? []).map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-
-        {/* ---- Faixa 4: produtos ---- */}
-        <div className="rounded-md border bg-panel p-4">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Produtos
-          </p>
-          <div className="space-y-2">
-            {items.map((it, idx) => {
-              const p = catalogs?.products.find((x) => x.id === it.product_id);
-              return (
-                <div key={it.key} className="grid items-end gap-3 border-b pb-3 sm:grid-cols-12">
-                  <div className="space-y-1 sm:col-span-5">
-                    <Label className="text-xs text-muted-foreground">Produto</Label>
-                    <Select value={it.product_id} onValueChange={(v) => pickProduct(idx, v)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(catalogs?.products ?? [])
-                          .filter((x) => x.active)
-                          .map((x) => (
-                            <SelectItem key={x.id} value={x.id}>
-                              {x.short_name || x.description} — {x.femsa_code}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1 sm:col-span-2">
-                    <Label className="text-xs text-muted-foreground">Paletes</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={it.pallets}
-                      onChange={(e) => pickPallets(idx, Number(e.target.value))}
-                      className="font-mono text-lg tabular-nums"
-                    />
-                  </div>
-
-                  <div className="space-y-1 sm:col-span-2">
-                    <Label className="text-xs text-muted-foreground">Caixas</Label>
-                    <Input value={fmtNum(calculateBoxes(it.pallets, it.boxes_per_pallet))} readOnly className="font-mono text-lg tabular-nums bg-muted" />
-                  </div>
-
-                  <div className="space-y-1 sm:col-span-2">
-                    <Label className="text-xs font-semibold text-destructive">FEMSA</Label>
-                    {p ? (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          await navigator.clipboard.writeText(p.femsa_code);
-                          toast.success("Código FEMSA copiado");
-                        }}
-                        className="flex w-full items-center justify-center rounded-md border-2 border-destructive bg-destructive/5 px-2 py-2 font-mono text-xl font-bold text-destructive hover:bg-destructive/10"
-                      >
-                        {p.femsa_code}
-                      </button>
-                    ) : (
-                      <p className="py-2 text-lg">—</p>
-                    )}
-                  </div>
-
-                  <div className="flex justify-end sm:col-span-1">
-                    <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(idx)} title="Remover">
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
+        {/* Produtos */}
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">Produtos</Label>
+          {items.map((it, idx) => {
+            const p = catalogs?.products.find((x) => x.id === it.product_id);
+            return (
+              <div key={it.key} className="flex flex-wrap items-end gap-3">
+                <div className="min-w-56 flex-1 space-y-1">
+                  <Label className="text-xs text-muted-foreground">Produto</Label>
+                  <Select value={it.product_id} onValueChange={(v) => pickProduct(idx, v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(catalogs?.products ?? [])
+                        .filter((x) => x.active)
+                        .map((x) => (
+                          <SelectItem key={x.id} value={x.id}>
+                            {x.short_name || x.description} — {x.femsa_code}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              );
-            })}
-          </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-3">
+                <div className="w-28 space-y-1">
+                  <Label className="text-xs text-muted-foreground">Paletes</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={it.pallets}
+                    onChange={(e) => pickPallets(idx, Number(e.target.value))}
+                  />
+                </div>
+
+                <div className="w-28 space-y-1">
+                  <Label className="text-xs text-muted-foreground">Caixas</Label>
+                  <Input value={fmtNum(calculateBoxes(it.pallets, it.boxes_per_pallet))} readOnly className="bg-muted" />
+                </div>
+
+                <div className="w-28 space-y-1">
+                  <Label className="text-xs font-semibold text-destructive">FEMSA</Label>
+                  {p ? (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(p.femsa_code);
+                        toast.success("Código FEMSA copiado");
+                      }}
+                      className="w-full rounded-md border border-destructive px-2 py-1.5 font-mono text-base font-bold text-destructive hover:bg-destructive/10"
+                    >
+                      {p.femsa_code}
+                    </button>
+                  ) : (
+                    <p className="py-1.5">—</p>
+                  )}
+                </div>
+
+                <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(idx)}>
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
+            );
+          })}
+
+          <div className="flex items-center gap-3">
             <Button type="button" variant="outline" size="sm" onClick={addItem}>
               <Plus className="mr-1 size-4" /> Produto
             </Button>
             <span className="ml-auto text-sm text-muted-foreground">
-              <span className="font-mono font-semibold text-foreground">{fmtNum(totalPallets)}</span> paletes ·{" "}
-              <span className="font-mono font-semibold text-foreground">{fmtNum(totalBoxes)}</span> caixas
+              {fmtNum(totalPallets)} paletes
             </span>
           </div>
         </div>
 
-        {/* ---- Ações ---- */}
-        <div className="flex flex-wrap justify-end gap-2 pt-2">
+        {/* Ações */}
+        <div className="flex flex-wrap justify-end gap-2">
           <Button variant="outline" onClick={save} disabled={saving}>
             {saving ? "Salvando…" : "Salvar"}
           </Button>

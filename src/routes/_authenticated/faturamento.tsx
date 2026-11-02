@@ -105,11 +105,14 @@ function BillingPage() {
   }
 
   async function open(l: LoadWithItems) {
-    const { error: err } = await supabase.rpc("claim_load", { load_id: l.id });
-    if (err) toast.error(err.message);
-    await qc.invalidateQueries({ queryKey: ["loads"] });
-    setSelectedId(l.id);
+  const { error } = await supabase.rpc("claim_load", { load_id: l.id });
+  if (error) {
+    toast.error(error.message);   // "em edição por Fulano"
+    return;                       // não abre
   }
+  await qc.invalidateQueries({ queryKey: ["loads"] });
+  setSelectedId(l.id);
+}
 
   if (!me?.roles.includes("faturamento"))
     return <p className="p-6 text-sm text-muted-foreground">Apenas o Faturamento acessa esta tela.</p>;

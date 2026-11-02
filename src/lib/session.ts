@@ -66,7 +66,11 @@ export const loadsQuery = (date: string) =>
     queryFn: async () => {
       const { data, error } = await supabase
         .from("loads")
-        .select("*, load_items(*)")
+        .select(`
+          *,
+          load_items(*),
+          destinations(sigla, name, center, cnpj, sap_client_code, itinerary, pallet_type, pallet_code)
+        `)
         .eq("import_date", date)
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -74,14 +78,17 @@ export const loadsQuery = (date: string) =>
     },
   });
 
-/** Loads imported between two dates (inclusive), newest day first — general history. */
 export const loadsRangeQuery = (from: string, to: string) =>
   queryOptions({
     queryKey: ["loads", "range", from, to],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("loads")
-        .select("*, load_items(*)")
+        .select(`
+          *,
+          load_items(*),
+          destinations(sigla, name, center, cnpj, sap_client_code, itinerary, pallet_type, pallet_code)
+        `)
         .gte("import_date", from)
         .lte("import_date", to)
         .order("import_date", { ascending: false })
@@ -90,6 +97,7 @@ export const loadsRangeQuery = (from: string, to: string) =>
       return data.map((l) => ({ ...l, load_items: [...l.load_items].sort((a, b) => a.position - b.position) }));
     },
   });
+
 
 /** Fixed itinerary per destination center, registered once (not edited in billing). */
 export const itinerariesQuery = queryOptions({

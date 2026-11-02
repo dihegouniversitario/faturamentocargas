@@ -8,7 +8,6 @@ import { StatusBadge } from "@/components/loads/StatusBadge";
 import { LoadDetailsDialog } from "@/components/loads/LoadDetailsDialog";
 import { itinerariesQuery, loadsRangeQuery, useLoadsRealtime, useMe } from "@/lib/session";
 import { fmtDate, fmtNum, todayIso, totalPallets, type LoadWithItems } from "@/lib/status";
-import { loadLabel } from "@/lib/parse-loads";
 import { STATUS_CLASS } from "@/lib/status";
 import { cn } from "@/lib/utils";
 
@@ -67,7 +66,6 @@ function HistoryPage() {
             Faturamento
           </Link>
         </Button>
-        <h1 className="mr-4 text-sm font-semibold">Histórico</h1>
         <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-8 w-40 bg-panel" />
         <span className="text-xs text-muted-foreground">até</span>
         <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-8 w-40 bg-panel" />
@@ -77,23 +75,22 @@ function HistoryPage() {
           onChange={(e) => setQ(e.target.value)}
           className="h-8 w-72 bg-panel"
         />
-        <span className="ml-auto text-xs text-muted-foreground">{total} carga(s)</span>
+        <span className="ml-auto text-sm text-muted-foreground">{total} carga(s)</span>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto">
         {days.map(([day, rows]) => (
           <section key={day} className="mb-4">
-            {/* Cabeçalho do dia — a faixa da planilha */}
-            <div className="sticky top-0 z-10 flex items-center gap-2 rounded-t-md border border-b-0 bg-muted px-3 py-1.5">
-              <span className="text-xs font-semibold">{fmtDate(day)}</span>
-              <span className="text-xs text-muted-foreground">· {rows.length} carga(s)</span>
-              <span className="ml-auto text-xs text-muted-foreground">
+            {/* Faixa do dia — data grande, é o que se usa para localizar rápido */}
+            <div className="sticky top-0 z-10 flex items-center gap-3 rounded-t-md border border-b-0 bg-muted px-3 py-2">
+              <span className="font-mono text-lg font-semibold tabular-nums">{fmtDate(day)}</span>
+              <span className="text-sm text-muted-foreground">· {rows.length} carga(s)</span>
+              <span className="ml-auto text-sm text-muted-foreground">
                 {fmtNum(rows.reduce((s, l) => s + totalPallets(l.load_items), 0))} paletes ·{" "}
                 {fmtNum(rows.reduce((s, l) => s + l.load_items.reduce((a, i) => a + i.boxes, 0), 0))} caixas
               </span>
             </div>
 
-            {/* Cargas daquele dia, lado a lado */}
             <div className="grid gap-2 rounded-b-md border bg-panel p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {rows.map((l) => (
                 <button
@@ -105,9 +102,10 @@ function HistoryPage() {
                     STATUS_CLASS[l.status],
                   )}
                 >
-                  <span className="text-xs font-semibold">Carga {l.load_number}</span>
-                  <span className="text-sm font-semibold">{l.plate}</span>
-                  <span className="text-xs tabular">DT {l.dt}</span>
+                  <span className="text-sm font-semibold">Carga {l.load_number}</span>
+                  {/* Placa e DT maiores: são os valores que se copia para o SAP */}
+                  <span className="font-mono text-base font-semibold">{l.plate}</span>
+                  <span className="font-mono text-base font-semibold tabular-nums">{l.dt}</span>
                   <span className="text-xs">{l.carrier || "—"}</span>
                   <span className="text-xs">
                     {l.dest_name} · {l.dest_center}

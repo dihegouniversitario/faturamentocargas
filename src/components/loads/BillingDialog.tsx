@@ -27,11 +27,6 @@ function maskPlate(raw: string): string {
   return base ? `${base}${PLATE_SUFFIX}` : "";
 }
 
-/** Placa sem o sufixo — para exibir ou comparar. */
-function plateBase(plate: string): string {
-  return plate.replace(/\s*E\s*D\s*$/i, "").trim().toUpperCase();
-}
-
 type Item = { key: string; product_id: string; pallets: number; boxes: number; boxes_per_pallet: number };
 
 async function copyValue(value: string, label: string) {
@@ -124,9 +119,12 @@ export function BillingDialog({
     },
   });
 
+  // Dados do destino: vêm do join em loadsQuery (destinations).
+  // Fallback nas colunas da própria carga, para as linhas antigas.
+  const d = load.destinations ?? {};
   const carrierName = catalogs?.carriers.find((c) => c.id === carrierId)?.name ?? load.carrier ?? "";
-  const palletType = load.pallet_type ?? "VENDA";
-  const palletCode = PALLET_CODE[palletType] ?? PALLET_CODE.VENDA;
+  const palletType = d.pallet_type ?? load.pallet_type ?? "VENDA";
+  const palletCode = d.pallet_code || PALLET_CODE[palletType] || PALLET_CODE.VENDA;
   const totalPallets = items.reduce((s, i) => s + Number(i.pallets || 0), 0);
 
   function setItem(idx: number, patch: Partial<Item>) {
@@ -207,7 +205,7 @@ export function BillingDialog({
       <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base">
-            Carga {load.load_number} · {load.dest_name ?? load.dest_center}
+            Carga {load.load_number} · {d.name ?? load.dest_name ?? load.dest_center}
           </DialogTitle>
 
           <div className="flex flex-wrap items-center gap-3 pt-1">
@@ -276,10 +274,10 @@ export function BillingDialog({
         )}
 
         <div className="grid grid-cols-3 gap-x-4 gap-y-2 sm:grid-cols-4">
-          <ReadField label="Centro" value={load.dest_center ?? ""} />
-          <ReadField label="CNPJ" value={load.cnpj ?? ""} copy />
-          <ReadField label="Cliente SAP" value={load.sap_client_code ?? ""} copy />
-          <ReadField label="Itinerário" value={load.itinerary ?? ""} copy />
+          <ReadField label="Centro" value={load.dest_center ?? d.center ?? ""} />
+          <ReadField label="CNPJ" value={d.cnpj ?? ""} copy />
+          <ReadField label="Cliente SAP" value={d.sap_client_code ?? ""} copy />
+          <ReadField label="Itinerário" value={d.itinerary ?? load.itinerary ?? ""} copy />
           <ReadField label="Tipo palete" value={palletType} />
           <ReadField label="Código palete" value={palletCode} copy />
         </div>
